@@ -9,5 +9,5 @@ class RootToken(Token):
     def __repr__(self) -> str:
         str_children = None
         if self.children:
-            str_children = [str(child) for child in self.children]
+            str_children = [f"{child}" for child in self.children]
         return f"Root(File Path = {self.file_path}\nTree = {str_children})"

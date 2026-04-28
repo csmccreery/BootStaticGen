@@ -9,42 +9,28 @@ class Scanner:
         self.trigger_chars = ["*", "-", "_", "#", "`" ">", "&", "[", "]", "(", ")", "!"]
         self.block_rules = [
             # Match any number of #'s followed by a space and then any amount of text ending in a newline
-            ("header", re.compile(r"^(?P<header>#+)\s(?P<text>.*?)\n")),
+            ("header", re.compile(r"^(?P<header>#+)\s(?P<text>.*?)(\n|$)")),
 
             # Match exactly 3 `'s followed by a newline, then any amount of text (including new lines) ending in exactly 3 `'s and a newline
             ("code_block", re.compile(r"^`{3}(?P<code_type>[a-zA-Z])?\n(?P<text>.*?)`{3}\n", re.DOTALL)),  
 
             # Literally anything + two newlines
-            ("paragraph", re.compile(r'^(?P<text>.*?)\n\n'))
+            ("paragraph", re.compile(r'^(?P<text>.*?)(\n\n|$)')),
+
+            ("ordered_list", re.compile(r'^(?P<list_item>[0-9])\.\s(?P<text>.*?)\n[0-9]\.')),
+            ("unordered_list", re.compile(r'^(?P<list_item>(\*|-|\+))\.\s(?P<text>.*?)\n\1\.'))
         ]
         self.inline_rules = [
             ("bold", re.compile(r"^\*\*(?P<text>.*?)\*\*", re.DOTALL)),
             ("italic", re.compile(r"^(\*|_)(?P<text>.*?)\1", re.DOTALL)), 
             ("link", re.compile(r"^\[(?P<text>.*?)\]\((?P<url>.*?)\)")),
-            ("wiki_link", re.compile(r"^\[\[(?P<link>.*?)(?P<text>.*?)?\]\]")),
-            ("image", re.compile(r"^!\[(?P<text>.*?)\]\((?P<link>.*?)\)")),
+            ("wiki_link", re.compile(r"^\[\[(?P<url>.*?)(?P<text>\|.*?)?\]\]")),
+            ("image", re.compile(r"^!\[(?P<text>.*?)\]\((?P<url>.*?)\)")),
         ]
 
     #####################################################################################
     #                            UTILITIES SECTION                                      #
     #####################################################################################
-
-    def peek(self, cursor):
-        if cursor + 1 < len(self.text):
-            return self.text[cursor + 1]
-        return None
-
-    def at_start_of_line(self, cursor):
-        # Short circuit logic. If the cursor is at the start of the text, we're good
-        # If the cursor isn't at the start of the text but the last character was a newline
-        # and the current character isn't just another newline. we're good
-
-        # God this is so hideous.
-        # TODO: Fix this
-        return cursor == 0 or (
-            cursor - 1 >= 0
-            and (self.text[cursor - 1] == "\n" and self.text[cursor] != "\n")
-        )
 
     def tokenize(self):
         if not self.text:
@@ -69,16 +55,18 @@ class Scanner:
 
             # If the following triggers both the cursor and the saved position *should* be the same
             if self.text[cursor] in self.trigger_chars:
-                new_token, current_pos = self.block_dispatcher(saved_pos)
-                if new_token:
-                    tokens.append(new_token)
-                    cursor = current_pos
+                new_token, next_pos = self.block_dispatcher(saved_pos)
             else:
                 block_match = re.match(self.block_rules[-1][1], self.text[saved_pos:])
-                new_token, current_pos = self.paragraph_handler(saved_pos, block_match)
-                if new_token:
-                    tokens.append(new_token)
-                    cursor = current_pos
+                new_token, next_pos = self.paragraph_handler(saved_pos, block_match)
+
+            if new_token:
+                print(new_token)
+                cursor = next_pos
+                tokens.append(new_token)
+            else:
+                cursor += 1
+                continue
 
             # Skip empty lines
             while cursor < len(self.text) and self.text[cursor] == '\n':
@@ -100,45 +88,64 @@ class Scanner:
         return None, saved_pos
 
     def header_handler(self, saved_pos, block_match):
-        header, text = block_match.group('header', 'text')
-        end_pos = saved_pos + block_match.end(0)
+        if block_match:
 
-        content_start = saved_pos + block_match.start('header')
-        content_end = saved_pos + block_match.start('header')
+            header = block_match.group('header')
+            content_start = saved_pos + block_match.start('header')
+            content_end = saved_pos + block_match.end('text')
+            next_pos = content_end + 1
+            print("Called: Header Handler")
+            print(f"Cursor: {saved_pos} Start: {block_match.start('text')}")
+            print(f"Cursor: {saved_pos} Start: {block_match.end('text')}")
 
-        return ParentToken(
-            token_type=ParentTokenType.HEADER,
-            children=[],
-            start=saved_pos,
-            end=end_pos,
-            data={'level', len(header)}
-        ), end_pos 
+            return ParentToken(
+                token_type=ParentTokenType.HEADER,
+                children=[],
+                start=content_start,
+                end=content_end,
+                data={'level', len(header)}
+            ), next_pos 
+        return None, saved_pos
 
     def code_block_handler(self, saved_pos, block_match):
         if block_match:
-           code_type = block_match.group('code_type')
-           end_pos = saved_pos + block_match.end('text')
+            print("block code")
 
-           return ParentToken(
+            code_type = block_match.group('code_type')
+            content_start = saved_pos + block_match.start('code_type')
+            content_end = saved_pos + block_match.end('text')
+            next_pos = content_end + 1
+            print("Called: Code Block Handler")
+            print(f"Cursor: {saved_pos} Start: {block_match.start('text')}")
+            print(f"Cursor: {saved_pos} Start: {block_match.end('text')}")
+
+            return ParentToken(
                 token_type=ParentTokenType.CODE_BLOCK,
                 children=[],
-                start=saved_pos,
-                end=end_pos,
+                start=content_start,
+                end=content_end,
                 data={'code_type', code_type}
-            ), end_pos
+            ), next_pos 
         return None, saved_pos
 
     def paragraph_handler(self, saved_pos, block_match):
         if block_match:
-            end_pos = saved_pos + block_match.end('text')
+            print("caught in paragraph")
+
+            content_start = saved_pos + block_match.start("text")
+            content_end = saved_pos + block_match.end("text")
+            next_pos = saved_pos + block_match.end()
+            print("Called: Paragraph Handler")
+            print(f"Cursor: {saved_pos} Start: {block_match.start('text')}")
+            print(f"Cursor: {saved_pos} Start: {block_match.end('text')}")
 
             return ParentToken(
                 token_type=ParentTokenType.PARAGRAPH,
                 children=[],
-                start=saved_pos,
-                end=end_pos,
+                start=content_start,
+                end=content_end,
                 data={}
-            ), end_pos
+            ), next_pos
         return None, saved_pos
 
     #####################################################################################
@@ -186,45 +193,103 @@ class Scanner:
         return None, cursor
 
     def handle_inline_bold(self, cursor, inline_match):
-        end_pos = cursor + inline_match.end("text")
+        if inline_match:
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            print(f"Cursor: {cursor} Start: {inline_match.start('text')}")
+            print(f"Cursor: {cursor} Start: {inline_match.end('text')}")
+            end_pos = cursor + inline_match.end()
 
-        return ParentToken(
-            token_type=ParentTokenType.PARAGRAPH,
-            children=[],
-            start=cursor,
-            end=end_pos,
-            data={}
-        ), end_pos
+            return ParentToken(
+                token_type=ParentTokenType.BOLD,
+                children=self.inline_parse(content_start, content_end),
+                start=content_start,
+                end=content_end,
+                data={}
+            ), end_pos
+        return None, cursor
 
     def handle_inline_italic(self, cursor, inline_match):
-        end_pos = cursor + inline_match.end("text")
+        if inline_match:
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            end_pos = cursor + inline_match.end()
+            print(f"Cursor: {cursor} Start: {inline_match.start('text')}")
+            print(f"Cursor: {cursor} Start: {inline_match.end('text')}")
 
-        return ParentToken(
-            token_type=ParentTokenType.PARAGRAPH,
-            children=[],
-            start=cursor,
-            end=end_pos,
-            data={}
-        ), end_pos
+            return ParentToken(
+                token_type=ParentTokenType.ITALIC,
+                children=self.inline_parse(content_start, content_end),
+                start=content_start,
+                end=content_end,
+                data={}
+            ), end_pos
+        return None, cursor    
 
     def handle_inline_code(self, cursor, inline_match):
-        end_pos = cursor + inline_match.end("text")
+        if inline_match:
+            print("inline code")
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            end_pos = cursor + inline_match.end()
 
-        return ParentToken(
-            token_type=ParentTokenType.PARAGRAPH,
-            children=[],
-            start=cursor,
-            end=end_pos,
-            data={}
-        ), end_pos
+            return ParentToken(
+                token_type=ParentTokenType.CODE,
+                children=[],
+                start=content_start,
+                end=content_end,
+                data={}
+            ), end_pos
+        return None, cursor    
 
-    def handle_inline_links(self, cursor, limit):
-        pass
+    def handle_inline_links(self, cursor, inline_match):
+        if inline_match:
+            print("inline links")
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            end_pos = cursor + inline_match.end("url") + 1
 
-    def handle_inline_wiki_links(self, cursor, limit):
-        pass
+            return ParentToken(
+                token_type=ParentTokenType.CODE,
+                children=[],
+                start=content_start,
+                end=content_end,
+                data={'url': inline_match.group("url")}
+            ), end_pos
+        return None, cursor    
 
-    def handle_inline_images(self, cursor, limit):
-        pass
+    def handle_inline_wiki_links(self, cursor, inline_match):
+        if inline_match:
+            print("inline wiki-links")
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            end_pos = cursor + inline_match.end("url") + 1
 
-    
+            return ParentToken(
+                token_type=ParentTokenType.CODE,
+                children=[],
+                start=content_start,
+                end=content_end,
+                data={'url': inline_match.group("url")}
+            ), end_pos
+        return None, cursor    
+
+    def handle_inline_images(self, cursor, inline_match):
+        if inline_match:
+            print("inline image")
+            content_start = cursor + inline_match.start("text")
+            content_end = cursor + inline_match.end("text")
+            end_pos = cursor + inline_match.end("url") + 1
+
+            return ParentToken(
+                token_type=ParentTokenType.CODE,
+                children=[],
+                start=content_start,
+                end=content_end,
+                data={
+                    'url': inline_match.group("url"),
+                    'alt': inline_match.group("text")
+                    }
+            ), end_pos
+        return None, cursor    
+
