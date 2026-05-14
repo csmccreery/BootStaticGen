@@ -1,15 +1,4 @@
 ### Header
-This is text. This is **bold text**. This is *italic* text. 
-
-#### This is also a header
-**This
-is
-multi
-line
-bold
-_That contains
-multi
-line
-italic_**
-
-
+This is **Bold
+text with *italic
+text* inside**

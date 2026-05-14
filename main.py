@@ -13,6 +13,8 @@ def parse_md(path):
     new_scanner = Scanner(file_content)
     root = RootToken(corrected_path)
     root.children = new_scanner.tokenize()
+    for child in root.children:
+        print(child.data['text'])
     pprint(root, indent=8, width=120)
 
 
