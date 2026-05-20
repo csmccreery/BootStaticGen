@@ -15,6 +15,11 @@ class TextToken(LeafToken):
         return f"TextToken: [{self.value}]"
 
 
+class InlineCodeToken(LeafToken):
+    def __init__(self, value: str) -> None:
+        super().__init__(t_type=TokenType.INLINE_CODE, value=value)
+
+
 class ImageToken(LeafToken):
     def __init__(self, value: str, alt_text: str, url: str) -> None:
         super().__init__(t_type=TokenType.IMAGE, value=value)

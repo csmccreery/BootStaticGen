@@ -1,10 +1,22 @@
-from token import Token, TokenType
-from block_token import BlockToken, BlockQuote, ParagraphToken, CodeBlock, HeaderToken
-from inline_token import InlineToken, StrongToken, EmphasisToken
-from leaf_token import LeafToken, ImageToken, LinkToken, TextToken
-from root import RootToken
-from typing import List
 import re
+from typing import List
+from token import Token, TokenType
+from inline_token import InlineToken, StrongToken, EmphasisToken
+from root import RootToken
+from block_token import (
+            BlockToken,
+            BlockQuote,
+            ParagraphToken,
+            CodeBlock,
+            HeaderToken
+        )
+from leaf_token import (
+            LeafToken,
+            InlineCodeToken,
+            ImageToken,
+            LinkToken,
+            TextToken
+        )
 
 
 def tokenize(lines) -> Token:
@@ -87,10 +99,27 @@ def parse_inline(content) -> List[Token]:
             before_tokens = parse_inline(before)
             after_tokens = parse_inline(after)
 
-            if rule == "strong":
-                token = StrongToken(children=parse_inline(inner))
-            elif rule == "emphasis":
-                token = EmphasisToken(children=parse_inline(inner))
+            match rule:
+                case "strong":
+                    token = StrongToken(children=parse_inline(inner))
+                case "emphasis":
+                    token = EmphasisToken(children=parse_inline(inner))
+                case "inline_code":
+                    token = InlineCodeToken(value=inner)
+                case "link":
+                    token = LinkToken(
+                                value=inner,
+                                url=match.group(2),
+                                display_text=match.group(1)
+                        )
+                case "image":
+                    token = ImageToken(
+                                value=inner,
+                                url=match.group(1),
+                                alt_text=match.group(2)
+                        )
+                case _:
+                    pass
 
             return before_tokens + [token] + after_tokens
 
