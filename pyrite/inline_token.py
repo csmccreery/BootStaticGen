@@ -1,5 +1,5 @@
-from token import TokenType
-from parent_token import ParentToken
+from .token import TokenType
+from .parent_token import ParentToken
 
 
 class InlineToken(ParentToken):

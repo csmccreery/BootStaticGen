@@ -1,26 +1,21 @@
-from src.ast_module.scanner import Scanner
-from src.ast_module.root_token import RootToken
-from pprint import pprint
+from pyrite.tokenizer import tokenize
 from pathlib import Path
 
 
 def parse_md(path):
     corrected_path = Path(path)
     with open(corrected_path, "r") as f:
-        file_content = f.read()
+        file_content = f.readlines()
         print(file_content)
 
-    new_scanner = Scanner(file_content)
-    root = RootToken(corrected_path)
-    root.children = new_scanner.tokenize()
-    for child in root.children:
-        print(child.data['text'])
-    pprint(root, indent=8, width=120)
+    root = tokenize(file_content)
+    return root
 
 
 def main():
     current_dir = Path(__file__).parent.resolve()
-    parse_md(current_dir / "tests" / "test.md")
+    root = parse_md(current_dir / "tests" / "test.md")
+    print(root)
 
 
 if __name__ == "__main__":

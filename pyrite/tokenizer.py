@@ -1,16 +1,16 @@
 import re
 from typing import List
-from token import Token, TokenType
-from inline_token import InlineToken, StrongToken, EmphasisToken
-from root import RootToken
-from block_token import (
+from .token import Token, TokenType
+from .inline_token import InlineToken, StrongToken, EmphasisToken
+from .root import RootToken
+from .block_token import (
             BlockToken,
             BlockQuote,
             ParagraphToken,
             CodeBlock,
             HeaderToken
         )
-from leaf_token import (
+from .leaf_token import (
             LeafToken,
             InlineCodeToken,
             ImageToken,
@@ -27,7 +27,7 @@ def parse_blocks(lines) -> RootToken:
     block_rules = [
                 ("block_quote", re.compile(r'^>\s?.*')),
                 ("heading", re.compile(r'^#{1,6}\s+.+')),
-                ("code_fence", re.compile(r'^```.*"')),
+                ("code_fence", re.compile(r'^```(\s.+?<language>).*"')),
                 ("list_item", re.compile(r'^[\*\-\+]\s+.*|^\d+\.\s.*')),
             ]
 
@@ -38,41 +38,48 @@ def parse_blocks(lines) -> RootToken:
         line: str = lines[cursor]
 
         for rule, pattern in block_rules:
-            match = re.search(pattern, line)
-            if match:
-                print(f"Block match {rule} found")
-                if rule == 'block_quote':
+            block_match = re.search(pattern, line)
+            match block_match:
+                case "block_quote":
                     pass
-                elif rule == 'heading':
+                case "heading":
                     depth = len(line.split()[0].strip())
                     content = line.split()[1].strip()
-                    print(f"Depth: {depth}")
                     blocks.append(HeaderToken(
                         children=parse_inline(content),
                         depth=depth
                     ))
                     cursor += 1
+                case "code_fence":
+                    language = block_match.group(1)
+                    code_lines = []
+                    while (
+                        cursor < len(lines) and
+                        not re.search(pattern, lines[cursor])
+                    ):
+                        code_lines.append(lines[cursor])
+                        cursor += 1
 
-                elif rule == 'code_fence':
+                    content = "\n".join(code_lines)
+                    blocks.append(
+                        CodeBlock(
+                            children=TextToken(value=content),
+                            language=language | "text"
+                        ))
+                case "list_item":
                     pass
+                case _:
+                    para_lines = []
+                    while cursor < len(lines) and not any(
+                        re.search(p, lines[cursor]) for _, p in block_rules
+                    ):
+                        para_lines.append(lines[cursor])
+                        cursor += 1
 
-                elif rule == 'list_item':
-                    pass
-                else:
-                    break
-            else:
-                # Catch all paragraph
-                para_lines = []
-                while cursor < len(lines) and not any(
-                    re.search(p, lines[cursor]) for _, p in block_rules
-                ):
-                    para_lines.append(lines[cursor])
-                    cursor += 1
-
-                blocks.append(
+                    blocks.append(
                         ParagraphToken(children=parse_inline(
                             "\n".join(para_lines)
-                            )))
+                        )))
 
     return RootToken(blocks)
 
@@ -105,14 +112,17 @@ def parse_inline(content) -> List[Token]:
                 case "emphasis":
                     token = EmphasisToken(children=parse_inline(inner))
                 case "inline_code":
+                    print("processing inline_code token")
                     token = InlineCodeToken(value=inner)
                 case "link":
+                    print("processing link token")
                     token = LinkToken(
                                 value=inner,
                                 url=match.group(2),
                                 display_text=match.group(1)
                         )
                 case "image":
+                    print("processing image token")
                     token = ImageToken(
                                 value=inner,
                                 url=match.group(1),

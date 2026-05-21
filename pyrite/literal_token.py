@@ -1,4 +1,4 @@
-from token import Token, TokenType
+from .token import Token, TokenType
 
 
 class LiteralToken(Token):

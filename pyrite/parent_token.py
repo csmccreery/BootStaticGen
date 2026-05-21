@@ -1,4 +1,4 @@
-from token import TokenType, Token
+from .token import TokenType, Token
 
 
 class ParentToken(Token):

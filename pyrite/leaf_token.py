@@ -1,5 +1,5 @@
-from token import TokenType
-from literal_token import LiteralToken
+from .token import TokenType
+from .literal_token import LiteralToken
 
 
 class LeafToken(LiteralToken):
