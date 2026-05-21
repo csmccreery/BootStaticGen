@@ -37,49 +37,56 @@ def parse_blocks(lines) -> RootToken:
     while cursor < len(lines):
         line: str = lines[cursor]
 
+        print(f"Processing line {line}")
         for rule, pattern in block_rules:
             block_match = re.search(pattern, line)
-            match block_match:
-                case "block_quote":
-                    pass
-                case "heading":
-                    depth = len(line.split()[0].strip())
-                    content = line.split()[1].strip()
-                    blocks.append(HeaderToken(
-                        children=parse_inline(content),
-                        depth=depth
-                    ))
-                    cursor += 1
-                case "code_fence":
-                    language = block_match.group(1)
-                    code_lines = []
-                    while (
-                        cursor < len(lines) and
-                        not re.search(pattern, lines[cursor])
-                    ):
-                        code_lines.append(lines[cursor])
-                        cursor += 1
-
-                    content = "\n".join(code_lines)
-                    blocks.append(
-                        CodeBlock(
-                            children=TextToken(value=content),
-                            language=language | "text"
+            if block_match:
+                print("block match found")
+                match block_match:
+                    case "block_quote":
+                        pass
+                    case "heading":
+                        depth = len(line.split()[0].strip())
+                        content = line.split()[1].strip()
+                        blocks.append(HeaderToken(
+                            children=parse_inline(content),
+                            depth=depth
                         ))
-                case "list_item":
-                    pass
-                case _:
-                    para_lines = []
-                    while cursor < len(lines) and not any(
-                        re.search(p, lines[cursor]) for _, p in block_rules
-                    ):
-                        para_lines.append(lines[cursor])
                         cursor += 1
+                    case "code_fence":
+                        print("processing code block")
+                        language = block_match.group(1)
+                        code_lines = []
+                        while (
+                            cursor < len(lines) and
+                            not re.search(pattern, lines[cursor])
+                        ):
+                            code_lines.append(lines[cursor])
+                            cursor += 1
 
-                    blocks.append(
-                        ParagraphToken(children=parse_inline(
-                            "\n".join(para_lines)
-                        )))
+                        content = "\n".join(code_lines)
+                        blocks.append(
+                            CodeBlock(
+                                children=TextToken(value=content),
+                                language=language | "text"
+                            ))
+                    case "list_item":
+                        pass
+                    case _:
+                        para_lines = []
+                        while cursor < len(lines) and not any(
+                            re.search(p, lines[cursor]) for _, p in block_rules
+                        ):
+                            para_lines.append(lines[cursor])
+                            cursor += 1
+
+                        blocks.append(
+                            ParagraphToken(children=parse_inline(
+                                "\n".join(para_lines)
+                            )))
+            else:
+                print("No block match found")
+                break
 
     return RootToken(blocks)
 
