@@ -31,7 +31,7 @@ def parse_header(lines, cursor) -> tuple[Token, int]:
 
 
 def parse_block_quote(lines, cursor) -> tuple[Token, int]:
-    return BlockQuote(children=[]), cursor + 1
+    return BlockQuote(children=[]), cursor
 
 
 def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
@@ -45,7 +45,7 @@ def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
     if para_lines:
         return ParagraphToken(children=parse_inline(
             "\n".join(para_lines)
-        )), cursor + 1
+        )), cursor
 
     return None, cursor
 
@@ -157,19 +157,15 @@ def parse_inline(content) -> List[Token]:
 
     match matched_rule:
         case "strong":
-            print("strong text")
             inner = earliest_match.group(1)
             token = StrongToken(children=parse_inline(inner))
         case "emphasis":
-            print("italic text")
             inner = earliest_match.group(1)
             token = EmphasisToken(children=parse_inline(inner))
         case "inline_code":
-            print("inline_code text")
             inner = earliest_match.group(1)
             token = InlineCodeToken(value=inner)
         case "link":
-            print("link text")
             display_text = earliest_match.group(1)
             url = earliest_match.group(2)
             token = LinkToken(
@@ -178,7 +174,6 @@ def parse_inline(content) -> List[Token]:
                         display_text=display_text
                 )
         case "image":
-            print("image text")
             alt_text = earliest_match.group(1)
             url = earliest_match.group(2)
             token = ImageToken(
@@ -187,7 +182,6 @@ def parse_inline(content) -> List[Token]:
                         alt_text=alt_text
                 )
         case _:
-            print("Matched no rules")
             token = TextToken(earliest_match.groups())
 
     return before_tokens + [token] + after_tokens
