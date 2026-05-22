@@ -8,4 +8,4 @@ class ParentToken(Token):
 
     def __repr__(self) -> str:
         return f"ParentToken: Type: [{self.token_type.value}] \
-                [Children: {[str(child) for child in self.children]}]"
+                [Children: {[str(child) for child in self.children]}"

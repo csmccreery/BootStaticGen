@@ -27,12 +27,6 @@ class HeaderToken(BlockToken):
         self.__depth = depth
 
 
-class CodeBlock(BlockToken):
-    def __init__(self, children, language=None) -> None:
-        super().__init__(t_type=TokenType.CODE_BLOCK, children=children)
-        self.__language = language or "plain_text"
-
-
 class ParagraphToken(BlockToken):
     def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.PARAGRAPH, children=children)

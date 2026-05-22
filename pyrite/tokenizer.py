@@ -1,20 +1,18 @@
 import re
 from typing import List
-from .token import Token, TokenType
-from .inline_token import InlineToken, StrongToken, EmphasisToken
+from .token import Token
+from .inline_token import StrongToken, EmphasisToken
 from .root import RootToken
 from .block_token import (
-            BlockToken,
             BlockQuote,
             ParagraphToken,
-            CodeBlock,
             HeaderToken
         )
 from .leaf_token import (
-            LeafToken,
             InlineCodeToken,
             ImageToken,
             LinkToken,
+            CodeBlock,
             TextToken
         )
 
@@ -23,11 +21,59 @@ def tokenize(lines) -> Token:
     return parse_blocks(lines)
 
 
+def parse_header(lines, cursor) -> tuple[Token, int]:
+    depth = len(lines[cursor].split()[0].strip())
+    content = lines[cursor].split()[1].strip()
+    return HeaderToken(
+        children=parse_inline(content),
+        depth=depth
+    ), cursor + 1
+
+
+def parse_block_quote(lines, cursor) -> tuple[Token, int]:
+    return BlockQuote(children=[]), cursor + 1
+
+
+def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
+    para_lines = []
+    while cursor < len(lines) and not any(
+        re.search(p, lines[cursor]) for _, p in block_rules
+    ):
+        para_lines.append(lines[cursor])
+        cursor += 1
+
+    if para_lines:
+        return ParagraphToken(children=parse_inline(
+            "\n".join(para_lines)
+        )), cursor + 1
+
+    return None, cursor
+
+
+def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
+    code_lines = []
+    cursor += 1
+    while (
+        cursor < len(lines) and
+        not re.search(pattern, lines[cursor])
+    ):
+        code_lines.append(lines[cursor])
+        cursor += 1
+
+    if cursor < len(lines):
+        cursor += 1
+
+    return CodeBlock(
+        value="\n".join(code_lines),
+        language="text"
+    ), cursor
+
+
 def parse_blocks(lines) -> RootToken:
     block_rules = [
                 ("block_quote", re.compile(r'^>\s?.*')),
                 ("heading", re.compile(r'^#{1,6}\s+.+')),
-                ("code_fence", re.compile(r'^```(\s.+?<language>).*"')),
+                ("code_fence", re.compile(r'^```\n')),
                 ("list_item", re.compile(r'^[\*\-\+]\s+.*|^\d+\.\s.*')),
             ]
 
@@ -35,58 +81,37 @@ def parse_blocks(lines) -> RootToken:
     cursor = 0
 
     while cursor < len(lines):
-        line: str = lines[cursor]
-
-        print(f"Processing line {line}")
+        matched = False
         for rule, pattern in block_rules:
-            block_match = re.search(pattern, line)
+            block_match = re.search(pattern, lines[cursor])
             if block_match:
-                print("block match found")
-                match block_match:
+                matched = True
+                block = None
+                new_cursor = float("inf")
+                match rule:
                     case "block_quote":
-                        pass
+                        block, new_cursor = parse_block_quote(lines, cursor)
                     case "heading":
-                        depth = len(line.split()[0].strip())
-                        content = line.split()[1].strip()
-                        blocks.append(HeaderToken(
-                            children=parse_inline(content),
-                            depth=depth
-                        ))
-                        cursor += 1
+                        block, new_cursor = parse_header(lines, cursor)
                     case "code_fence":
-                        print("processing code block")
-                        language = block_match.group(1)
-                        code_lines = []
-                        while (
-                            cursor < len(lines) and
-                            not re.search(pattern, lines[cursor])
-                        ):
-                            code_lines.append(lines[cursor])
-                            cursor += 1
-
-                        content = "\n".join(code_lines)
-                        blocks.append(
-                            CodeBlock(
-                                children=TextToken(value=content),
-                                language=language | "text"
-                            ))
+                        block, new_cursor = parse_code_fence(pattern, lines, cursor)
                     case "list_item":
                         pass
-                    case _:
-                        para_lines = []
-                        while cursor < len(lines) and not any(
-                            re.search(p, lines[cursor]) for _, p in block_rules
-                        ):
-                            para_lines.append(lines[cursor])
-                            cursor += 1
 
-                        blocks.append(
-                            ParagraphToken(children=parse_inline(
-                                "\n".join(para_lines)
-                            )))
-            else:
-                print("No block match found")
-                break
+                blocks.append(block)
+                if new_cursor < len(lines):
+                    cursor = new_cursor
+                else:
+                    return RootToken(blocks)
+            if not matched:
+                block, new_cursor = parse_paragraph(block_rules, lines, cursor)
+                if block:
+                    blocks.append(block)
+
+                if new_cursor < len(lines):
+                    cursor = new_cursor
+                else:
+                    return RootToken(blocks)
 
     return RootToken(blocks)
 
@@ -96,48 +121,68 @@ def parse_inline(content) -> List[Token]:
             ("strong", re.compile(r'\*\*(.+?)\*\*', re.DOTALL)),
             ("emphasis", re.compile(r'\*(.+?)\*', re.DOTALL)),
             ("inline_code", re.compile(r'`(.+?)`')),
-            ("link", re.compile(r'\[(.+?)\]\((.+?)\)')),
             ("image", re.compile(r'!\[(.+?)\]\((.+?)\)')),
+            ("link", re.compile(r'\[(.+?)\]\((.+?)\)')),
         ]
 
     if not content:
         return []
 
+    earliest_match = None
+    earliest_pos = float("inf")
+    matched_rule = None
+
     for rule, pattern in inline_rules:
-        match = re.search(pattern, content)
-        if match:
-            before = content[:match.start()]
-            inner = match.group(1)
-            after = content[match.end():]
+        inline_match = pattern.search(content)
+        if inline_match and inline_match.start() < earliest_pos:
+            earliest_pos = inline_match.start()
+            earliest_match = inline_match
+            matched_rule = rule
 
-            before_tokens = parse_inline(before)
-            after_tokens = parse_inline(after)
+    if earliest_match is None:
+        return [TextToken(content)]
 
-            match rule:
-                case "strong":
-                    token = StrongToken(children=parse_inline(inner))
-                case "emphasis":
-                    token = EmphasisToken(children=parse_inline(inner))
-                case "inline_code":
-                    print("processing inline_code token")
-                    token = InlineCodeToken(value=inner)
-                case "link":
-                    print("processing link token")
-                    token = LinkToken(
-                                value=inner,
-                                url=match.group(2),
-                                display_text=match.group(1)
-                        )
-                case "image":
-                    print("processing image token")
-                    token = ImageToken(
-                                value=inner,
-                                url=match.group(1),
-                                alt_text=match.group(2)
-                        )
-                case _:
-                    pass
+    before = content[:earliest_match.start()]
+    after = content[earliest_match.end():]
 
-            return before_tokens + [token] + after_tokens
+    before_tokens = parse_inline(before)
+    after_tokens = parse_inline(after)
 
-    return [TextToken(content)]
+    token = None
+
+    match matched_rule:
+        case "strong":
+            print("strong text")
+            inner = earliest_match.group(1)
+            token = StrongToken(children=parse_inline(inner))
+        case "emphasis":
+            print("italic text")
+            inner = earliest_match.group(1)
+            token = EmphasisToken(children=parse_inline(inner))
+        case "inline_code":
+            print("inline_code text")
+            inner = earliest_match.group(1)
+            token = InlineCodeToken(value=inner)
+        case "link":
+            print("link text")
+            display_text = earliest_match.group(1)
+            url = earliest_match.group(2)
+            token = LinkToken(
+                        value=earliest_match.group(0),
+                        url=url,
+                        display_text=display_text
+                )
+        case "image":
+            print("image text")
+            alt_text = earliest_match.group(1)
+            url = earliest_match.group(2)
+            token = ImageToken(
+                        value=earliest_match.group(0),
+                        url=url,
+                        alt_text=alt_text
+                )
+        case _:
+            print("Matched no rules")
+            token = TextToken(earliest_match.groups())
+
+    return before_tokens + [token] + after_tokens

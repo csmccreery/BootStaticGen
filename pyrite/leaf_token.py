@@ -27,8 +27,15 @@ class ImageToken(LeafToken):
         self.__url = url
 
 
-class LinkToken(LiteralToken):
+class LinkToken(LeafToken):
     def __init__(self, value: str, url: str, display_text: str) -> None:
         super().__init__(t_type=TokenType.LINK, value=value)
         self.__url = url
         self.__display_text = display_text
+
+
+class CodeBlock(LeafToken):
+    def __init__(self, value: str, language=None) -> None:
+        super().__init__(t_type=TokenType.CODE_BLOCK, value=value)
+        self.__language = language or "plain_text"
+

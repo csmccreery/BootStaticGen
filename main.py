@@ -15,7 +15,10 @@ def parse_md(path):
 def main():
     current_dir = Path(__file__).parent.resolve()
     root = parse_md(current_dir / "tests" / "test.md")
-    print(root)
+    
+    for child in root.children:
+        print(type(child))
+        print(child)
 
 
 if __name__ == "__main__":
