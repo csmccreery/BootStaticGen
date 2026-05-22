@@ -6,13 +6,13 @@ class LeafToken(LiteralToken):
     def __init__(self, t_type, value: str) -> str:
         super().__init__(t_type=t_type, value=value)
 
+    def __repr__(self) -> str:
+        return f"{self.token_type.value}: Value={self.value}"
+
 
 class TextToken(LeafToken):
     def __init__(self, value) -> None:
         super().__init__(t_type=TokenType.TEXT, value=value)
-
-    def __repr__(self) -> str:
-        return f"TextToken: [{self.value}]"
 
 
 class InlineCodeToken(LeafToken):
@@ -26,6 +26,9 @@ class ImageToken(LeafToken):
         self.__alt_text = alt_text
         self.__url = url
 
+    def __repr__(self) -> str:
+        return f"{self.token_type.value}: Value={self.value} alt_text={self.__alt_text} url={self.__url}"
+
 
 class LinkToken(LeafToken):
     def __init__(self, value: str, url: str, display_text: str) -> None:
@@ -33,9 +36,15 @@ class LinkToken(LeafToken):
         self.__url = url
         self.__display_text = display_text
 
+    def __repr__(self) -> str:
+        return f"{self.token_type.value}: Value={self.value} display_text={self.__display_text} url={self.__url}"
+
 
 class CodeBlock(LeafToken):
     def __init__(self, value: str, language=None) -> None:
         super().__init__(t_type=TokenType.CODE_BLOCK, value=value)
         self.__language = language or "plain_text"
+
+    def __repr__(self) -> str:
+        return f"{self.token_type.value}: Value={self.value}"
 

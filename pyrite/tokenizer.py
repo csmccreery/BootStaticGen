@@ -55,7 +55,7 @@ def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
     cursor += 1
     while (
         cursor < len(lines) and
-        not re.search(pattern, lines[cursor])
+        not pattern.search(lines[cursor])
     ):
         code_lines.append(lines[cursor])
         cursor += 1
@@ -69,11 +69,16 @@ def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
     ), cursor
 
 
+# TODO
+def parse_list_block(lines, cursor) -> tuple[Token, int]:
+    return None, cursor
+
+
 def parse_blocks(lines) -> RootToken:
     block_rules = [
                 ("block_quote", re.compile(r'^>\s?.*')),
                 ("heading", re.compile(r'^#{1,6}\s+.+')),
-                ("code_fence", re.compile(r'^```\n')),
+                ("code_fence", re.compile(r'^```')),
                 ("list_item", re.compile(r'^[\*\-\+]\s+.*|^\d+\.\s.*')),
             ]
 
@@ -83,11 +88,11 @@ def parse_blocks(lines) -> RootToken:
     while cursor < len(lines):
         matched = False
         for rule, pattern in block_rules:
-            block_match = re.search(pattern, lines[cursor])
+            block_match = pattern.search(lines[cursor])
             if block_match:
                 matched = True
                 block = None
-                new_cursor = float("inf")
+                new_cursor = cursor
                 match rule:
                     case "block_quote":
                         block, new_cursor = parse_block_quote(lines, cursor)
@@ -96,22 +101,22 @@ def parse_blocks(lines) -> RootToken:
                     case "code_fence":
                         block, new_cursor = parse_code_fence(pattern, lines, cursor)
                     case "list_item":
-                        pass
+                        block, new_cursor = parse_list_block(lines, cursor)
 
                 blocks.append(block)
                 if new_cursor < len(lines):
                     cursor = new_cursor
                 else:
                     return RootToken(blocks)
-            if not matched:
-                block, new_cursor = parse_paragraph(block_rules, lines, cursor)
-                if block:
-                    blocks.append(block)
+        if not matched:
+            block, new_cursor = parse_paragraph(block_rules, lines, cursor)
+            if block:
+                blocks.append(block)
 
-                if new_cursor < len(lines):
-                    cursor = new_cursor
-                else:
-                    return RootToken(blocks)
+            if new_cursor < len(lines):
+                cursor = new_cursor
+            else:
+                return RootToken(blocks)
 
     return RootToken(blocks)
 
