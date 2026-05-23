@@ -47,4 +47,3 @@ class CodeBlock(LeafToken):
 
     def __repr__(self) -> str:
         return f"{self.token_type.value}: Value={self.value}"
-

@@ -1,25 +1,16 @@
 import re
 from typing import List
-from .token import Token
-from .inline_token import (
-            StrongToken,
-            EmphasisToken,
-            ListItemToken
-        )
-from .root import RootToken
-from .block_token import (
-            BlockQuote,
-            ParagraphToken,
-            HeaderToken,
-            ListBlockToken
-        )
-from .leaf_token import (
-            InlineCodeToken,
-            ImageToken,
-            LinkToken,
-            CodeBlock,
-            TextToken
-        )
+from tokens.token import Token
+from tokens.inline_token import StrongToken, EmphasisToken, ListItemToken
+from tokens.root import RootToken
+from tokens.block_token import BlockQuote, ParagraphToken, HeaderToken, ListBlockToken
+from tokens.leaf_token import (
+    InlineCodeToken,
+    ImageToken,
+    LinkToken,
+    CodeBlock,
+    TextToken,
+)
 
 
 def tokenize(lines) -> Token:
@@ -29,10 +20,7 @@ def tokenize(lines) -> Token:
 def parse_header(lines, cursor) -> tuple[Token, int]:
     depth = len(lines[cursor].split()[0].strip())
     content = lines[cursor].split()[1].strip()
-    return HeaderToken(
-        children=parse_inline(content),
-        depth=depth
-    ), cursor + 1
+    return HeaderToken(children=parse_inline(content), depth=depth), cursor + 1
 
 
 def parse_block_quote(pattern, lines, cursor) -> tuple[Token, int]:
@@ -54,9 +42,7 @@ def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
         cursor += 1
 
     if para_lines:
-        return ParagraphToken(children=parse_inline(
-            "\n".join(para_lines)
-        )), cursor
+        return ParagraphToken(children=parse_inline("\n".join(para_lines))), cursor
 
     return None, cursor
 
@@ -64,20 +50,14 @@ def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
 def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
     code_lines = []
     cursor += 1
-    while (
-        cursor < len(lines) and
-        not pattern.search(lines[cursor])
-    ):
+    while cursor < len(lines) and not pattern.search(lines[cursor]):
         code_lines.append(lines[cursor])
         cursor += 1
 
     if cursor < len(lines):
         cursor += 1
 
-    return CodeBlock(
-        value="\n".join(code_lines),
-        language="text"
-    ), cursor
+    return CodeBlock(value="\n".join(code_lines), language="text"), cursor
 
 
 # TODO
@@ -87,11 +67,11 @@ def parse_list_block(lines, cursor) -> tuple[Token, int]:
 
 def parse_blocks(lines) -> RootToken:
     block_rules = [
-                ("block_quote", re.compile(r'^>\s?.*')),
-                ("heading", re.compile(r'^#{1,6}\s+.+')),
-                ("code_fence", re.compile(r'^```')),
-                ("list_item", re.compile(r'^[\*\-\+]\s+.*|^\d+\.\s.*')),
-            ]
+        ("block_quote", re.compile(r"^>\s?.*")),
+        ("heading", re.compile(r"^#{1,6}\s+.+")),
+        ("code_fence", re.compile(r"^```")),
+        ("list_item", re.compile(r"^[\*\-\+]\s+.*|^\d+\.\s.*")),
+    ]
 
     blocks = []
     cursor = 0
@@ -134,12 +114,12 @@ def parse_blocks(lines) -> RootToken:
 
 def parse_inline(content) -> List[Token]:
     inline_rules = [
-            ("strong", re.compile(r'\*\*(.+?)\*\*', re.DOTALL)),
-            ("emphasis", re.compile(r'\*(.+?)\*', re.DOTALL)),
-            ("inline_code", re.compile(r'`(.+?)`')),
-            ("image", re.compile(r'!\[(.+?)\]\((.+?)\)')),
-            ("link", re.compile(r'\[(.+?)\]\((.+?)\)')),
-        ]
+        ("strong", re.compile(r"\*\*(.+?)\*\*", re.DOTALL)),
+        ("emphasis", re.compile(r"\*(.+?)\*", re.DOTALL)),
+        ("inline_code", re.compile(r"`(.+?)`")),
+        ("image", re.compile(r"!\[(.+?)\]\((.+?)\)")),
+        ("link", re.compile(r"\[(.+?)\]\((.+?)\)")),
+    ]
 
     if not content:
         return []
@@ -158,8 +138,8 @@ def parse_inline(content) -> List[Token]:
     if earliest_match is None:
         return [TextToken(content)]
 
-    before = content[:earliest_match.start()]
-    after = content[earliest_match.end():]
+    before = content[: earliest_match.start()]
+    after = content[earliest_match.end() :]
 
     before_tokens = parse_inline(before)
     after_tokens = parse_inline(after)
@@ -180,18 +160,14 @@ def parse_inline(content) -> List[Token]:
             display_text = earliest_match.group(1)
             url = earliest_match.group(2)
             token = LinkToken(
-                        value=earliest_match.group(0),
-                        url=url,
-                        display_text=display_text
-                )
+                value=earliest_match.group(0), url=url, display_text=display_text
+            )
         case "image":
             alt_text = earliest_match.group(1)
             url = earliest_match.group(2)
             token = ImageToken(
-                        value=earliest_match.group(0),
-                        url=url,
-                        alt_text=alt_text
-                )
+                value=earliest_match.group(0), url=url, alt_text=alt_text
+            )
         case _:
             token = TextToken(earliest_match.groups())
 
