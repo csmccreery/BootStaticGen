@@ -27,6 +27,11 @@ class HeaderToken(BlockToken):
         self.__depth = depth
 
 
+class ListBlockToken(BlockToken):
+    def __init__(self, children) -> None:
+        super().__init__(t_type=TokenType.LIST, children=children)
+
+
 class ParagraphToken(BlockToken):
     def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.PARAGRAPH, children=children)

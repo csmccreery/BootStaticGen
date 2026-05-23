@@ -1,12 +1,17 @@
 import re
 from typing import List
 from .token import Token
-from .inline_token import StrongToken, EmphasisToken
+from .inline_token import (
+            StrongToken,
+            EmphasisToken,
+            ListItemToken
+        )
 from .root import RootToken
 from .block_token import (
             BlockQuote,
             ParagraphToken,
-            HeaderToken
+            HeaderToken,
+            ListBlockToken
         )
 from .leaf_token import (
             InlineCodeToken,
@@ -30,8 +35,14 @@ def parse_header(lines, cursor) -> tuple[Token, int]:
     ), cursor + 1
 
 
-def parse_block_quote(lines, cursor) -> tuple[Token, int]:
-    return BlockQuote(children=[]), cursor
+def parse_block_quote(pattern, lines, cursor) -> tuple[Token, int]:
+    quote_children = []
+    while cursor < len(lines) and pattern.search(lines[cursor]):
+        inline_token = parse_inline(lines[cursor])
+        quote_children.append(inline_token)
+        cursor += 1
+
+    return BlockQuote(children=quote_children), cursor
 
 
 def parse_paragraph(block_rules, lines, cursor) -> tuple[Token, int]:
@@ -71,7 +82,7 @@ def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
 
 # TODO
 def parse_list_block(lines, cursor) -> tuple[Token, int]:
-    return None, cursor
+    pass
 
 
 def parse_blocks(lines) -> RootToken:
@@ -95,7 +106,7 @@ def parse_blocks(lines) -> RootToken:
                 new_cursor = cursor
                 match rule:
                     case "block_quote":
-                        block, new_cursor = parse_block_quote(lines, cursor)
+                        block, new_cursor = parse_block_quote(pattern, lines, cursor)
                     case "heading":
                         block, new_cursor = parse_header(lines, cursor)
                     case "code_fence":

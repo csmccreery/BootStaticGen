@@ -6,6 +6,7 @@ class TokenType(Enum):
     BLOCK_QUOTE = "block_quote"
     HEADING = "heading"
     LIST = "list"
+    LIST_ITEM = "list_item"
     PARAGRAPH = "paragraph"
     CODE_BLOCK = "code_block"
     STRONG = "strong"

@@ -18,3 +18,8 @@ class StrongToken(InlineToken):
 class EmphasisToken(InlineToken):
     def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.EMPHASIS, children=children)
+
+class ListItemToken(InlineToken):
+    def __init__(self, children, depth=0) -> None:
+        super().__init__(t_type=TokenType.LIST_ITEM, children=children)
+        self.__depth = depth
