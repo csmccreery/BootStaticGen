@@ -3,6 +3,10 @@ This is **Bold
 text with *italic
 text* inside**
 
+* This is a list item
+* this is also a list item
+    * This is a nested list item
+
 > This is a 
 > multi line
 > quote - Wayne gretsky

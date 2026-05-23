@@ -28,8 +28,9 @@ class HeaderToken(BlockToken):
 
 
 class ListBlockToken(BlockToken):
-    def __init__(self, children) -> None:
+    def __init__(self, children, ordered) -> None:
         super().__init__(t_type=TokenType.LIST, children=children)
+        self.__ordered = ordered
 
 
 class ParagraphToken(BlockToken):

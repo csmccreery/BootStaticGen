@@ -60,9 +60,53 @@ def parse_code_fence(pattern, lines, cursor) -> tuple[Token, int]:
     return CodeBlock(value="\n".join(code_lines), language="text"), cursor
 
 
-# TODO
-def parse_list_block(lines, cursor) -> tuple[Token, int]:
-    pass
+def get_indent(line) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def parse_list_block(lines, cursor, base_indent=0) -> tuple[Token, int]:
+    ordered = re.match(r'^\d+\.', lines[cursor]) is not None
+    items = []
+
+    while cursor < len(lines):
+        line = lines[cursor]
+        indent = get_indent(line)
+
+        if indent < base_indent:
+            break
+
+        list_match = re.match(
+            r'^(\s*)([\*\-\+]\s+|\d+\.\s)(.*)', line
+        )
+        if not list_match or indent != base_indent:
+            break
+
+        item_content = list_match.group(3).strip()
+        cursor += 1
+
+        nested_list = None
+        while cursor < len(lines):
+            next_indent = get_indent(lines[cursor])
+            if next_indent > base_indent and re.match(
+                r'^\s*([\*\-\+]\s+|\d+\.\s)', lines[cursor]
+            ):
+                nested_list, cursor = parse_list_block(
+                    lines, cursor, base_indent=next_indent
+                )
+                break
+            elif next_indent > base_indent:
+                item_content += " " + lines[cursor].strip()
+                cursor += 1
+            else:
+                break
+
+        item_children = parse_inline(item_content)
+        if nested_list:
+            item_children.append(nested_list)
+
+        items.append(ListItemToken(children=item_children))
+
+    return ListBlockToken(children=items, ordered=ordered), cursor
 
 
 def parse_blocks(lines) -> RootToken:
@@ -70,7 +114,7 @@ def parse_blocks(lines) -> RootToken:
         ("block_quote", re.compile(r"^>\s?.*")),
         ("heading", re.compile(r"^#{1,6}\s+.+")),
         ("code_fence", re.compile(r"^```")),
-        ("list_item", re.compile(r"^[\*\-\+]\s+.*|^\d+\.\s.*")),
+        ("list_item", re.compile(r"^(\s*)([\*\-\+]\s+|\d+\.\s)(.*)")),
     ]
 
     blocks = []
