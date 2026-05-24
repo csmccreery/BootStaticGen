@@ -27,7 +27,8 @@ def parse_block_quote(pattern, lines, cursor) -> tuple[Token, int]:
     quote_children = []
     while cursor < len(lines) and pattern.search(lines[cursor]):
         inline_token = parse_inline(lines[cursor])
-        quote_children.append(inline_token)
+        print(type(inline_token))
+        quote_children.extend(inline_token)
         cursor += 1
 
     return BlockQuote(children=quote_children), cursor

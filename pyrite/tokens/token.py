@@ -23,5 +23,8 @@ class Token:
         self.children = children
         self.value = value
 
+    def to_html(self) -> str:
+        raise NotImplementedError
+
     def __repr__(self) -> str:
         raise NotImplementedError

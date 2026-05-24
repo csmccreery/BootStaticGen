@@ -16,8 +16,10 @@ def main():
     current_dir = Path(__file__).parent.resolve()
     root = parse_md(current_dir / "tests" / "test.md")
 
-    for child in root.children:
-        print(child)
+    webpage = root.to_html()
+    print(webpage)
+
+
 
 
 if __name__ == "__main__":

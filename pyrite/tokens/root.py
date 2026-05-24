@@ -11,3 +11,6 @@ class RootToken(ParentToken):
 
     def set_children(self, children: List[Token]) -> None:
         self.children = children
+
+    def to_html(self) -> str:
+        return f"<html>{''.join([child.to_html() for child in self.children])}</html>"

@@ -14,13 +14,21 @@ class StrongToken(InlineToken):
     def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.STRONG, children=children)
 
+    def to_html(self) -> str:
+        return f"<strong>{''.join([child.to_html() for child in self.children])}</strong>"
+
 
 class EmphasisToken(InlineToken):
     def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.EMPHASIS, children=children)
 
+    def to_html(self) -> str:
+        return f"<em>{''.join([child.to_html() for child in self.children])}</em>"
+
 
 class ListItemToken(InlineToken):
-    def __init__(self, children, depth=0) -> None:
+    def __init__(self, children) -> None:
         super().__init__(t_type=TokenType.LIST_ITEM, children=children)
-        self.__depth = depth
+
+    def to_html(self) -> str:
+        return f"<li>{''.join([child.to_html() for child in self.children])}</li>"
