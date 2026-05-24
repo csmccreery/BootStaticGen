@@ -20,7 +20,5 @@ def main():
     print(webpage)
 
 
-
-
 if __name__ == "__main__":
     main()

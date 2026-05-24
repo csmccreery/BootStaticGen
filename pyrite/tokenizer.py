@@ -27,7 +27,6 @@ def parse_block_quote(pattern, lines, cursor) -> tuple[Token, int]:
     quote_children = []
     while cursor < len(lines) and pattern.search(lines[cursor]):
         inline_token = parse_inline(lines[cursor])
-        print(type(inline_token))
         quote_children.extend(inline_token)
         cursor += 1
 
@@ -66,7 +65,7 @@ def get_indent(line) -> int:
 
 
 def parse_list_block(lines, cursor, base_indent=0) -> tuple[Token, int]:
-    ordered = re.match(r'^\d+\.', lines[cursor]) is not None
+    ordered = re.match(r"^\d+\.", lines[cursor]) is not None
     items = []
 
     while cursor < len(lines):
@@ -76,9 +75,7 @@ def parse_list_block(lines, cursor, base_indent=0) -> tuple[Token, int]:
         if indent < base_indent:
             break
 
-        list_match = re.match(
-            r'^(\s*)([\*\-\+]\s+|\d+\.\s)(.*)', line
-        )
+        list_match = re.match(r"^(\s*)([\*\-\+]\s+|\d+\.\s)(.*)", line)
         if not list_match or indent != base_indent:
             break
 
@@ -89,7 +86,7 @@ def parse_list_block(lines, cursor, base_indent=0) -> tuple[Token, int]:
         while cursor < len(lines):
             next_indent = get_indent(lines[cursor])
             if next_indent > base_indent and re.match(
-                r'^\s*([\*\-\+]\s+|\d+\.\s)', lines[cursor]
+                r"^\s*([\*\-\+]\s+|\d+\.\s)", lines[cursor]
             ):
                 nested_list, cursor = parse_list_block(
                     lines, cursor, base_indent=next_indent

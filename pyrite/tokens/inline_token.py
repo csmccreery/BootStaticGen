@@ -15,7 +15,9 @@ class StrongToken(InlineToken):
         super().__init__(t_type=TokenType.STRONG, children=children)
 
     def to_html(self) -> str:
-        return f"<strong>{''.join([child.to_html() for child in self.children])}</strong>"
+        return (
+            f"<strong>{''.join([child.to_html() for child in self.children])}</strong>"
+        )
 
 
 class EmphasisToken(InlineToken):
