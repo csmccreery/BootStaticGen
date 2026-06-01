@@ -14,9 +14,6 @@ from tokens.leaf_token import (
 
 
 def tokenize(lines) -> Token:
-    if len(lines) == 0:
-        return RootToken(children=[TextToken(value="")])
-    
     return parse_blocks(lines)
 
 
