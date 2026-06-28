@@ -21,18 +21,23 @@ def tokenize(lines) -> Token:
 
 
 def parse_header(lines, cursor) -> tuple[Token, int]:
-    depth = len(lines[cursor].split()[0].strip())
-    content = lines[cursor].split()[1].strip()
+    line = lines[cursor]
+    depth = len(line.split()[0].strip())
+
+    content = line.lstrip('#').strip()
+
     return HeaderToken(children=parse_inline(content), depth=depth), cursor + 1
 
 
 def parse_block_quote(pattern, lines, cursor) -> tuple[Token, int]:
     quote_children = []
     while cursor < len(lines) and pattern.search(lines[cursor]):
-        inline_token = parse_inline(lines[cursor])
+        stripped_line = lines[cursor][1:].lstrip().strip()
+        inline_token = parse_inline(stripped_line)
         quote_children.extend(inline_token)
         cursor += 1
 
+    print(quote_children)
     return BlockQuote(children=quote_children), cursor
 
 
@@ -117,7 +122,6 @@ def parse_blocks(lines) -> RootToken:
         ("code_fence", re.compile(r"^```")),
         ("list_item", re.compile(r"^(\s*)([\*\-\+]\s+|\d+\.\s)(.*)")),
     ]
-
     blocks = []
     cursor = 0
 
@@ -154,13 +158,14 @@ def parse_blocks(lines) -> RootToken:
             else:
                 return RootToken(blocks)
 
+    print(blocks)
     return RootToken(blocks)
 
 
 def parse_inline(content) -> List[Token]:
     inline_rules = [
         ("strong", re.compile(r"\*\*(.+?)\*\*", re.DOTALL)),
-        ("emphasis", re.compile(r"\*(.+?)\*", re.DOTALL)),
+        ("emphasis", re.compile(r"_(.+?)_", re.DOTALL)),
         ("inline_code", re.compile(r"`(.+?)`")),
         ("image", re.compile(r"!\[(.+?)\]\((.+?)\)")),
         ("link", re.compile(r"\[(.+?)\]\((.+?)\)")),

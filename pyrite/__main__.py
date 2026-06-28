@@ -8,11 +8,32 @@ import argparse
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '-g',
+        '--good-boi',
+        help="Look you made the damn thing using a mark and sweep. You've gone above and beyond the call of duty.",
+        action="store_true"
+    )
+    
+    parser.add_argument(
         '-i',
         '--input',
         help="Path like object pointing at either a directory or single file path", default="/"
     )
-    
+     
+    parser.add_argument(
+        '-O',
+        '--one-shot',
+        help="Instead of parsing an entire directory, point the parser at one file, get one file out", action="store_true"
+    )
+  
+    parser.add_argument(
+        '-D',
+        '--dashboard',
+        help="If true, will create an index.html at the root of the target dir with links to all created files", 
+        default=False,
+        action="store_true"
+    )
+ 
     parser.add_argument(
         '-o',
         '--output',
@@ -76,7 +97,13 @@ def recursive_parse_md_to_html(dir_path) -> tuple[dict, list]:
     return html_tree, path_names
 
 
-def initialize_static_dir(output_dir, input_dir, roots) -> None:
+def parse_single_md_to_html(input: Path):
+    with open(input, "r") as fp:
+        roots = tokenize(fp.readlines()).to_html()
+        return roots
+
+
+def initialize_static_dir(output_dir, input_dir, roots, make_dashboard=False) -> None:
     # Flatten the nested dictionary safely
     def recursive_flatten_dir(root_dict) -> list:
         accumulated_paths = []
@@ -95,9 +122,12 @@ def initialize_static_dir(output_dir, input_dir, roots) -> None:
     body = ""
     for original_path, content in recursive_flatten_dir(roots):
         relative_part = original_path.relative_to(input_dir)
-        target_path = output_dir / relative_part.with_suffix('.html') 
+        print(f"Relative_part: {relative_part}")
+        target_path = output_dir / relative_part.with_suffix(".html") 
+        print(f"Target Path: {target_path}")
 
         relative_url = target_path.relative_to(output_dir)
+        print(f"Relative Final: {relative_url}")
         
         body += f"<li><a href={relative_url.as_posix()}>{target_path.name}</a></li>"
         target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,21 +138,38 @@ def initialize_static_dir(output_dir, input_dir, roots) -> None:
     dash_board = f"<html>{body}</html>"
     
     output_dir.mkdir(parents=True, exist_ok=True)
-    with open(output_dir / "index.html", "w", encoding='utf-8') as index:
-        index.write(dash_board)
+    if make_dashboard:
+        with open(output_dir / "index.html", "w", encoding='utf-8') as index:
+            index.write(dash_board)
             
 
 def main():
     parser = argument_parser()
     args = parser.parse_args()
 
-    input_dir = Path(args.input).resolve()
-    output_dir = Path(args.input).resolve()
-    
-    roots, _ = recursive_parse_md_to_html(input_dir)
+    if args.good_boi:
+        print("Well done.")
+        return
 
-    initialize_static_dir(output_dir, input_dir, roots)
-    run_server(("127.0.0.1", args.port), directory=output_dir) 
+    if args.one_shot:
+        input = Path(args.input)
+        output = Path(args.output)
+        roots = parse_single_md_to_html(input)
+        with open(output, "w") as idx:
+            idx.write(roots)
+
+        if args.serve:
+            run_server(("127.0.0.1", args.port), directory=output.parent.resolve())
+
+    else:
+        input_dir = Path(args.input).resolve()
+        output_dir = Path(args.output).resolve()
+    
+        roots, _ = recursive_parse_md_to_html(input_dir)
+        initialize_static_dir(output_dir, input_dir, roots, False)
+
+    if args.serve:
+        run_server(("127.0.0.1", args.port), directory=output_dir) 
 
 
 if __name__ == "__main__":
