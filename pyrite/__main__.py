@@ -8,6 +8,13 @@ import argparse
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '-R',
+        '--root',
+        help="Specify the root directory of the http server",
+        action="store_true"
+    )
+ 
+    parser.add_argument(
         '-g',
         '--good-boi',
         help="Look you made the damn thing using a mark and sweep. You've gone above and beyond the call of duty.",
